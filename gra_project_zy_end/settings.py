@@ -75,8 +75,12 @@ WSGI_APPLICATION = 'gra_project_zy_end.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'health_monitor',
+        'USER': 'root',
+        'PASSWORD': 'wuchuwen',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
     }
 }
 
