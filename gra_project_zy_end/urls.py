@@ -15,10 +15,19 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from User.views import Login, Register
+from User.views import Login, Register, update_username, update_height, update_weight, update_age
+from Home.views import update_steps, get_steps
 
 urlpatterns = [
     # 用户
     path("login/", Login.as_view()),
     path("register/", Register.as_view()),
+    path("update_username", update_username),
+    path("update_height", update_height),
+    path("update_weight", update_weight),
+    path("update_age", update_age),
+
+    # 首页
+    path("update_steps", update_steps),
+    path("get_steps", get_steps),
 ]
