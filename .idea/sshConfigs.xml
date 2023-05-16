@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="121.5.76.146" id="80d93106-9de0-4b18-9f5d-ffb72bb44a78" port="2204" customName="zy_passwd" nameFormat="CUSTOM" username="root" useOpenSSHConfig="true">
+        <option name="customName" value="zy_passwd" />
+      </sshConfig>
+    </configs>
+  </component>
+</project>

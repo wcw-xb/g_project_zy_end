@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="e31922f0-fde0-431c-b3a6-4f3b444530de" name="zy_project">
+        <fileTransfer rootFolder="/var/gra_project_zy_end" accessType="SFTP" host="121.5.76.146" port="2204" sshConfigId="80d93106-9de0-4b18-9f5d-ffb72bb44a78" sshConfig="zy_passwd">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
