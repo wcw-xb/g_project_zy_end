@@ -1,9 +1,11 @@
 import copy
+import logging
 
 from django.http import JsonResponse
 from django.views import View
 from django.core.handlers.wsgi import WSGIRequest
 
+from Util.SportsInfoManage import get_steps
 from Util.TokenManage import generate_token, authentication
 from Util.UserManage import verify_user, add_user
 
@@ -33,11 +35,13 @@ class Login(View):
                 "phone": user.user_phone,
                 "height": user.height,
                 "weight": user.weight,
-                "age": user.age
+                "age": user.age,
+                "steps": get_steps(user.user_id)
             }
         else:
             return_data["status"] = 0
             return_data["error"] = "账号密码错误"
+        logging.info(return_data)
         return JsonResponse(return_data)
 
 

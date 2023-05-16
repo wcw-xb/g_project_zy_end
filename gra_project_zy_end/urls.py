@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from User.views import Login, Register, update_username, update_height, update_weight, update_age
-from Home.views import update_steps, get_steps
+from Home.views import update_steps, get_steps, upload_sensor_data, show_data
 
 urlpatterns = [
     # 用户
@@ -30,4 +30,7 @@ urlpatterns = [
     # 首页
     path("update_steps", update_steps),
     path("get_steps", get_steps),
+    path("upload_sensor_data", upload_sensor_data),
+    path("show_data", show_data),
+
 ]
