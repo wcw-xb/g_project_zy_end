@@ -39,3 +39,11 @@ class LatestStatus(models.Model):
     user_id = models.CharField(max_length=20)  # 用户id
     status = models.CharField(max_length=10, default="暂无")
     data = models.FloatField()  # 状态数据
+
+
+class CollisionInfo(models.Model):
+    user_id = models.CharField(max_length=20)  # 用户id
+    collision_day = models.DateField()
+    collision_time = models.TimeField()
+    level = models.IntegerField()  # 碰撞等级
+

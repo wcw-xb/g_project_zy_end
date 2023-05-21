@@ -6,10 +6,10 @@ import pickle
 import numpy as np
 from django.core.cache import cache
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from User.views import RETURN_DATA
 from Util.TokenManage import authentication
-from Home.models import SportsInfo, WalkData, RunData, SitData
+from Home.models import SportsInfo, WalkData, RunData, SitData, CollisionInfo
 import pandas as pd
 
 Status = {
@@ -51,11 +51,49 @@ def get_steps(request):
         return JsonResponse(return_data)
 
 
+def record_latest_status(status_li, user_id):
+    """
+    记录最新状态
+    """
+    tag = f"{status_li.index(max(status_li)) + 1}"
+    tag_res = Status[tag]
+    if tag_res == '走路':
+        data = f"{round(WalkData.objects.filter(user_id=user_id, now_time=datetime.date.today()).first().walk_rate, 2)} m/s"
+    elif tag_res == "坐姿":
+        data = f"{SitData.objects.filter(user_id=user_id, now_time=datetime.date.today()).first().sit_time} s(秒)"
+    else:
+        data = f"{round(RunData.objects.filter(user_id=user_id, now_time=datetime.date.today()).first().run_rate, 2)} m/s"
+    return str(tag_res), str(data)
+
+
+def collision_monitor(predicted_targets, data, user_id):
+    magnitudes = [np.linalg.norm(reading) for reading in data]
+    # 计算加加速度
+    jerk = np.diff(magnitudes)
+    # 划分碰撞强度的阈值，根据实际情况调整
+    thresholds = [5, 10, 20, 30]
+    # 以此类推
+    levels = list(np.digitize(jerk, thresholds))
+    if max(levels) >= 2:
+        CollisionInfo.objects.create(
+            user_id=user_id,
+            collision_day=datetime.datetime.now().date(),
+            collision_time=datetime.datetime.now().time(),
+            level=max(levels) + 1
+        )
+    if 3 in levels or 4 in levels:
+        # 碰撞严重
+        return True
+    return False
+
+
 @authentication
 def upload_sensor_data(request):
     return_data = copy.deepcopy(RETURN_DATA)
     if request.method == "POST":
         request_data = json.loads(request.body.decode())
+        if not request_data["data"]:
+            return JsonResponse(return_data)
         model_from_cache = cache.get("random_forest_model")
         if model_from_cache is None:
             from Home.load_model import load_model
@@ -65,9 +103,9 @@ def upload_sensor_data(request):
             model = pickle.loads(model_from_cache)
         data = pd.DataFrame(request_data["data"], columns=['x_data', 'y_data', 'z_data'])
         duration = request_data["duration"]
-        print(data)
         predicted_targets = [int(x) for x in list(model.predict(data))]
-        print(predicted_targets)
+        # 碰撞监测
+        collision_res = collision_monitor(predicted_targets, request_data["data"], request.user.user_id)
         sit_time = round(predicted_targets.count(1) * duration / len(predicted_targets))  # 坐姿
         # stand_time = round(predicted_targets.count(2) * duration / len(predicted_targets), 2)  # 站姿
         # sleep_time = round(predicted_targets.count(3) * duration / len(predicted_targets), 2)  # 卧姿
@@ -99,7 +137,8 @@ def upload_sensor_data(request):
             accelerations = np.array(request_data["data"])
             delta_t = duration / len(predicted_targets)
             velocities = np.cumsum(accelerations * delta_t, axis=0)
-            walk_rate = np.mean(np.mean(velocities, axis=0))
+            abs_velocities = np.abs(velocities)  # 取速度的绝对值
+            walk_rate = np.mean(np.mean(abs_velocities, axis=0))
             walk.walk_rate = walk_rate
             walk.walk_clock = datetime.datetime.now().time()
         walk.save()
@@ -116,7 +155,8 @@ def upload_sensor_data(request):
             accelerations = np.array(request_data["data"])
             delta_t = duration / len(predicted_targets)
             velocities = np.cumsum(accelerations * delta_t, axis=0)
-            run_rate = np.mean(np.mean(velocities, axis=0))
+            abs_velocities = np.abs(velocities)  # 取速度的绝对值
+            run_rate = np.mean(np.mean(abs_velocities, axis=0))
             run.run_rate = run_rate
             run.run_clock = datetime.datetime.now().time()
         run.save()
@@ -131,6 +171,11 @@ def upload_sensor_data(request):
         if Status[f"{status_li.index(max(status_li)) + 1}"] == "坐姿":
             sit.sit_clock = datetime.datetime.now().time()
         sit.save()
+        status, data = record_latest_status(status_li, request.user.user_id)
+        return_data["latest"] = {
+            "status": status,
+            "value": data
+        }
         return_data["data"] = status_li
         return_data["info"] = {
             "status": Status[f"{status_li.index(max(status_li)) + 1}"],
@@ -148,8 +193,10 @@ def upload_sensor_data(request):
             "sit_info": {
                 "sit_time": sit.sit_time,
                 "sit_clock": sit.sit_clock
-            }
+            },
+            "collision": collision_res
         }
+    print("collision&&&", collision_res)
     return JsonResponse(return_data)
 
 
@@ -179,3 +226,23 @@ def show_data(request):
             }
         }
         return JsonResponse(return_data)
+
+
+def collision_sort_key(collision_data):
+    d_time = datetime.datetime.strptime(collision_data["collision_day"], "%Y-%m-%d")
+    return d_time
+
+
+@authentication
+def monitor_data(request):
+    if request.method == "GET":
+        collision_obj = CollisionInfo.objects.filter(user_id=request.user.user_id).all()
+        all_data = []
+        for collision in collision_obj:
+            data = {
+                "collision_day": collision.collision_day.strftime("%Y-%m-%d"),
+                "collision_time": collision.collision_time.strftime("%H:%M:%S"),
+                "level": collision.level
+            }
+            all_data.append(data)
+        return HttpResponse(json.dumps(sorted(all_data, key=collision_sort_key, reverse=True)))
